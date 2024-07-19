@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Clasificador de Iris</title>
+  <link href="./style.css" rel="stylesheet" type="text/css" />
+
+
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@900&family=Open+Sans:wght@300;400;700&display=swap"
+    rel="stylesheet">
+  <!-- Libreria de tensorflow js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <!-- Libreria de Chart js graficos estadisticos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+
+<body>
+
+  <div class="main">
+    
+    <form class="section-1 flex end-justify dir-column">
+      <div><h3>Parametros de prediccion</h3></div>
+      <div class="input-container">
+        <input type="number" class="input" min="0.00" id="longitud_petalo" placeholder="" >
+        <label class="input-label">Longitud de pétalo cm.</label>
+      </div>
+      <div class="input-container">
+        <input type="number" class="input" min="0.00" id="ancho_petalo" placeholder="" >
+        <label class="input-label">Ancho de pétalo cm.</label>
+      </div>
+      <div class="input-container">
+        <input type="number" class="input" min="0.00" id="longitud_sepalo" placeholder="" >
+        <label class="input-label">Longitud de sépalo cm.</label>
+      </div>
+      <div class="input-container">
+        <input type="number" class="input" min="0.00" id="ancho_sepalo" placeholder="" >
+        <label class="input-label">Ancho de sépalo cm.</label>
+      </div>
+      <div class="flex end-justify gap-5px">
+        <button class="bt-delete" id="" type="reset" onclick="">Limpiar</button>
+        <button id="bt-Buscar" type="button" onclick="predecirFlor()">Buscar</button>
+      </div>
+    </form>
+    <div class="line"></div>
+    <div class="section-2 flex">
+      <div id="chart-accurate" class="grafi"></div>
+      <div id="chart-loss" class="grafi"></div>
+    </div>
+    <div class="section-3 flex">
+      <div class="mensajes" id="msg-salida">
+        <div class="text-output">Output:</div>
+        <span class="msg animation_mq" id="txt-salida" style="width: 12ch;animation-timing-function: steps(20);"> >
+          Salida...</span>
+      </div>
+      <div class="mensajes-images" id="msg-images">
+        <div class="text-output">Image-output:</div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let modelo = null;
+    (async () => {
+      console.log("Cargando modelo...")
+      modelo = await tf.loadLayersModel('model.json');
+      console.log("Modelo cargado!");
+
+    
+      fetch('model_metrics.json')
+        .then(response => response.json())
+        .then(data => {
+          console.log("Metricas cargadas!");
+      
+          const loss = data.loss;
+          const val_loss = data.val_loss;
+          const accuracy = data.accuracy;
+          const val_accuracy = data.val_accuracy;
+      
+          // Generar los gráficos
+          createLossChart(loss, val_loss);
+          createAccuracyChart(accuracy, val_accuracy);
+        })
+        .catch(error => {
+          console.error('Error al cargar el archivo JSON:', error);
+        });
+ 
+    })();
+
+    async function predecirFlor() {
+      const nombres_etiquetas = ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica'];
+
+      const longitudPetalo = parseFloat(document.getElementById('longitud_petalo').value);
+      const anchoPetalo = parseFloat(document.getElementById('ancho_petalo').value);
+      const longitudSepalo = parseFloat(document.getElementById('longitud_sepalo').value);
+      const anchoSepalo = parseFloat(document.getElementById('ancho_sepalo').value);
+
+
+      const pruebaMedida = tf.tensor2d([[longitudPetalo, anchoPetalo, longitudSepalo, anchoSepalo]], [1, 4]);
+
+      // Continuar con la predicción
+      const prediccion = modelo.predict(pruebaMedida);
+
+      const prediccion_class = prediccion.argMax(-1).dataSync()[0];
+
+      const nombreFlor = nombres_etiquetas[prediccion_class];
+
+
+      console.log(`La flor es: ${nombreFlor}`);
+
+      let msg_salida = document.getElementById("msg-salida");
+      msg_salida.innerHTML = `<div class="text-output">Output:</div>`;
+      let textSpan = document.createElement('span');
+      const espacios = " ".repeat(nombreFlor.length);
+      textSpan.textContent = `La flor es: ${espacios}`;
+      msg_salida.appendChild(textSpan);
+      textSpan.classList.add('msg');
+      textSpan.classList.add('animation_mq');
+      textSpan.style.width = '28ch';
+      textSpan.style.animationTimingFunction = 'steps(20)';
+      textSpan.setAttribute("data-text", `${nombreFlor}`)
+
+      let msg_images = document.getElementById("msg-images");
+      msg_images.innerHTML = `<div class="text-output">Image-output:</div>`;
+      let img = document.createElement('img');
+
+      switch (nombreFlor) {
+        case "Iris-setosa":
+          img.src = "./img/iris_setosa.png"
+          break;
+        case "Iris-versicolor":
+          img.src = "./img/iris_versicolor.png"
+          break;
+        case "Iris-virginica":
+          img.src = "./img/iris_virginica.png"
+          break;
+      }
+      msg_images.appendChild(img);
+    }
+  </script>
+  <script src="functionCharts.js"></script>
+</body>
+
+</html>
